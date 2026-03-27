@@ -11,6 +11,7 @@ services:
       POSTGRES_DB: mydb
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./import:/import
 
   app:
     build: .
