@@ -1,0 +1,6 @@
+
+ALTER TABLE books ADD COLUMN cover_url TEXT;
+ALTER TABLE books ADD COLUMN description TEXT;
+ALTER TABLE books ADD COLUMN subjects TEXT;
+ALTER TABLE books ADD COLUMN publish_year INTEGER;
+ALTER TABLE books ADD COLUMN isbn TEXT;
