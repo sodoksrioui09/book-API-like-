@@ -44,6 +44,12 @@ public class BookSearchController {
         return bookRepository.search(q, year, pageable);
     }
 
+
+    @GetMapping("/books/default")
+    public Page<Book> defaultBooks(Pageable pageable) {
+        return bookRepository.findAllEnriched(pageable);
+    }
+
     @GetMapping("/books")
     public Page<Book> booksByAuthor(
             @RequestParam(required=false) String author,
