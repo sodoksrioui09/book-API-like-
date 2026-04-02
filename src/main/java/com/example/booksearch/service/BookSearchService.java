@@ -57,7 +57,6 @@ public class BookSearchService {
             pageContent = uniqueUnifiedeBooks.subList(start, end);
         }
 
-        //Return Page
         return new PageImpl<>(pageContent, pageable, totalElements );
 
 

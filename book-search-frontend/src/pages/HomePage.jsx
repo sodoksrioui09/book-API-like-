@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
 import axios from "axios";
+import { useState, useEffect } from "react";
 import BookCard from "../components/BookCard";
 
 export default function HomePage() {
@@ -14,18 +14,15 @@ export default function HomePage() {
     const [raw, setRaw] = useState(0);
     const [uniqueAuthors, setUniqueAuthors] = useState(0);
 
-// This controls WHEN stats show:
     const [activeQuery, setActiveQuery] = useState("");
-
 
     const BASE_URL = "http://localhost:8080";
 
-    // Fetch books at first homepage load
-    const fetchDefaultBooks = async () => {
+    const fetchDefaultBooks = async (pageNumber = page) => {
         setLoading(true);
         try {
             const res = await axios.get(`${BASE_URL}/books/default`, {
-                params: { page, size: 16 }
+                params: { page: pageNumber, size: 15 }
             });
             setBooks(res.data.content);
             setTotalPages(res.data.totalPages);
@@ -34,55 +31,53 @@ export default function HomePage() {
         }
         setLoading(false);
     };
-    //Fetch stats at first load
+
     const fetchStats = async () => {
         try {
             const booksRes = await axios.get(`${BASE_URL}/stats/raw`);
             setTotalBooks(booksRes.data.count);
             setRaw(booksRes.data.raw);
 
-
             const enrichedRes = await axios.get(`${BASE_URL}/stats/enriched`);
             setEnriched(enrichedRes.data.enriched);
 
             const authorsRes = await axios.get(`${BASE_URL}/stats/authors`);
             setUniqueAuthors(authorsRes.data.count);
-            console.log("STATS:", totalBooks, enriched, raw, uniqueAuthors);
         } catch (err) {
             console.error("Stats error:", err);
         }
     };
 
-
-    // Fetch books (used by search + pagination)
-    const fetchBooks = async (searchQuery) => {
+    const fetchUnifiedSearch = async (searchQuery, pageNumber = 0) => {
         setLoading(true);
         try {
-            const res = await axios.get(`${BASE_URL}/books/search`, {
-                params: { q: searchQuery, page, size: 16 },
+            const res = await axios.get(`${BASE_URL}/books/searchUnifiede`, {
+                params: { q: searchQuery, page: pageNumber, size: 15 },
             });
+
             setBooks(res.data.content);
             setTotalPages(res.data.totalPages);
         } catch (err) {
-            console.error("Error fetching books:", err);
+            console.error("Unified search error", err);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    // Run default search on first load
     useEffect(() => {
-        fetchStats();//show stats
-        fetchDefaultBooks(); // default keyword
+        fetchStats();
+        fetchDefaultBooks();
     }, []);
 
-    // Fetch new page when page changes
     useEffect(() => {
-        if (activeQuery === "") {
-            fetchDefaultBooks();
+        if (query.trim()) {
+            fetchUnifiedSearch(query, page);
         } else {
-            fetchBooks(activeQuery);
+            fetchDefaultBooks(page);
+            setActiveQuery("");
         }
     }, [page]);
+
     const handleSearch = () => {
         setPage(0);
         setActiveQuery(query);
@@ -90,95 +85,193 @@ export default function HomePage() {
         if (!query) {
             fetchDefaultBooks();
         } else {
-            fetchBooks(query);
+            fetchUnifiedSearch(query, 0);
         }
     };
 
     return (
-        <div style={{ padding: "40px", fontFamily: "Arial" }}>
-            <h1>Book Search</h1>
-
-            {/* Search Bar */}
-            <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
-                <input
-                    type="text"
-                    placeholder="Search for books..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    style={{
-                        padding: "12px",
-                        width: "300px",
-                        borderRadius: "6px",
-                        border: "1px solid #ccc",
-                    }}
-                />
-                <button
-                    onClick={handleSearch}
-                    style={{
-                        padding: "12px 20px",
-                        background: "#0078ff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                    }}
-                >
-                    Search
-                </button>
-            </div>
-            {activeQuery === "" && (
-                <div
-                    style={{
-                        background: "#f9f9f9",
-                        padding: "12px",
-                        borderRadius: "8px",
-                        marginBottom: "20px",
-                        width: "fit-content"
-                    }}
-                >
-                    <p><strong>Total Books:</strong> {totalBooks}</p>
-                    <p><strong>Enriched Books:</strong> {enriched}</p>
-                    <p><strong>Raw Books:</strong> {raw}</p>
-                    <p><strong>Unique Authors:</strong> {uniqueAuthors}</p>
-                </div>
-            )}
-
-            {/* Loading Indicator */}
-            {loading && <p>Loading...</p>}
-
-            {/* Book Grid */}
+        <div
+            style={{
+                minHeight: "100vh",
+                background: "#f9fafb",
+                padding: "40px 20px",
+                fontFamily: "Inter, system-ui, sans-serif",
+            }}
+        >
             <div
                 style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "20px",
-                    marginTop: "20px",
+                    maxWidth: "1200px",
+                    margin: "0 auto",
+
                 }}
             >
-                {books.map((book) => (
-                    <BookCard key={book.id} book={book} />
-                ))}
-            </div>
+                {/* HEADER */}
+                <div style={{ marginBottom: "32px" }}>
+                    <h1 style={{
+                        fontSize: "36px",
+                        fontWeight: "800",
+                        marginBottom: "8px",
+                        color: "#111827"
+                    }}>
+                        📚 Book Discovery
+                    </h1>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div style={{ marginTop: "20px" }}>
-                    <button disabled={page === 0} onClick={() => setPage(page - 1)}>
-                        Previous
-                    </button>
+                    <p style={{ color: "#6b7280", fontSize: "16px" }}>
+                        Discover books by title, author, or topic
+                    </p>
+                </div>
 
-                    <span style={{ margin: "0 15px" }}>
-            Page {page + 1} of {totalPages}
-          </span>
+                {/* SEARCH */}
+                <div
+                    style={{
+                        display: "flex",
+                        gap: "12px",
+                        marginBottom: "32px"
+                    }}
+                >
+                    <input
+                        type="text"
+                        placeholder="Search books, authors, topics..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: "16px",
+                            borderRadius: "14px",
+                            border: "1px solid #e5e7eb",
+                            fontSize: "16px",
+                            background: "white",
+                        }}
+                    />
 
                     <button
-                        disabled={page + 1 === totalPages}
-                        onClick={() => setPage(page + 1)}
+                        onClick={handleSearch}
+                        style={{
+                            padding: "16px 24px",
+                            background: "#2563eb",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "14px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            boxShadow: "0 4px 12px rgba(37,99,235,0.2)"
+                        }}
                     >
-                        Next
+                        Search
                     </button>
                 </div>
-            )}
+
+                {/* STATS */}
+                {activeQuery === "" && (
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                            gap: "20px",
+                            marginBottom: "32px"
+                        }}
+                    >
+                        {[
+                            { label: "Total Books", value: totalBooks },
+                            { label: "Enriched Books", value: enriched },
+                            { label: "Raw Books", value: raw },
+                            { label: "Authors", value: uniqueAuthors },
+                        ].map((stat) => (
+                            <div
+                                key={stat.label}
+                                style={{
+                                    background: "white",
+                                    borderRadius: "16px",
+                                    padding: "22px",
+                                    border: "1px solid #e5e7eb",
+                                    boxShadow: "0 10px 25px rgba(0,0,0,0.05)"
+                                }}
+                            >
+                                <div style={{
+                                    fontSize: "13px",
+                                    color: "#6b7280",
+                                    marginBottom: "6px"
+                                }}>
+                                    {stat.label}
+                                </div>
+
+                                <div style={{
+                                    fontSize: "28px",
+                                    fontWeight: "700"
+                                }}>
+                                    {stat.value}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* LOADING */}
+                {loading && (
+                    <div style={{ textAlign: "center", marginTop: "40px" }}>
+                        <p>Loading...</p>
+                    </div>
+                )}
+
+                {/* GRID */}
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                        gap: "20px",
+                        marginTop: "20px",
+                    }}
+                >
+                    {books.map((book) => (
+                        <BookCard key={book.id} book={book} />
+                    ))}
+                </div>
+
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                    <div
+                        style={{
+                            marginTop: "40px",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            gap: "16px"
+                        }}
+                    >
+                        <button
+                            disabled={page === 0}
+                            onClick={() => setPage(page - 1)}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "10px",
+                                border: "1px solid #e5e7eb",
+                                background: "white",
+                                cursor: "pointer"
+                            }}
+                        >
+                            Previous
+                        </button>
+
+                        <span style={{ fontWeight: "500" }}>
+                            Page {page + 1} of {totalPages}
+                        </span>
+
+                        <button
+                            disabled={page + 1 === totalPages}
+                            onClick={() => setPage(page + 1)}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "10px",
+                                border: "1px solid #e5e7eb",
+                                background: "white",
+                                cursor: "pointer"
+                            }}
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

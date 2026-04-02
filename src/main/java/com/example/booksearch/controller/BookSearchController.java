@@ -37,7 +37,7 @@ public class BookSearchController {
     }
     */
 
-    @GetMapping("/searchUnifiede")
+    @GetMapping("/books/searchUnifiede")
     public Page<Book> searchUnifiede(
             @RequestParam String q,
             Pageable pageable
