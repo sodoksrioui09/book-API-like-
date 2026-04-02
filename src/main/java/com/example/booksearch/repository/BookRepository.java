@@ -15,6 +15,28 @@ import java.util.Map;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
+//NotPageable TEXT SEARCH needed for unified search (later)
+    @Query(
+            value = """                 
+            SELECT * FROM books
+                        WHERE cover_url IS NOT NULL
+                          AND search_vector @@ plainto_tsquery(:q)
+                          AND (:year IS NULL OR publication_year = :year)
+                        ORDER BY title ASC
+                        """,nativeQuery = true)
+    List<Book> searchNotPageable(@Param("q") String q, @Param("year") Integer year);
+//NotPageable Author SEARCH needed for unified search (later)
+    @Query(
+            value = """
+            SELECT * FROM books
+            WHERE cover_url IS NOT NULL
+              AND UPPER(author) LIKE UPPER(CONCAT('%', :author, '%'))
+            ORDER BY title ASC
+            """,nativeQuery = true)
+    List<Book> searchByAuthorNotPageable(@Param("author") String author);
+
+
+
 
 
     @Query(
@@ -73,6 +95,31 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             nativeQuery = true
     )
     Page<Book> findAllEnriched(Pageable pageable);
+
+    //FIND all enrichedand recent books by publich_year
+    @Query(
+            value = """
+            SELECT * FROM books
+            WHERE cover_url IS NOT NULL 
+            ORDER BY publish_year DESC 
+    """,    countQuery = """
+        SELECT count(*) FROM books
+        WHERE cover_url IS NOT NULL
+        """
+            ,nativeQuery = true)
+   Page<Book> findRecent(Pageable pageable);
+
+//find all athors pagnated
+    @Query(value = """
+        SELECT DISTINCT author FROM books
+        ORDER BY author ASC 
+""",countQuery = """
+        SELECT COUNT(DISTINCT author)
+        FROM books
+""" ,nativeQuery = true)
+   Page<Map<String, Object>> findAllAuthor(Pageable pageable);
+
+
     @Query(
             value = """
             SELECT author, COUNT(*) AS count
@@ -83,6 +130,16 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         """, nativeQuery = true)
 
     List<Map<String, Object>> topAuthors(@Param("limit") int limit);
+
+
+    /// stats methods
+
+    long countByCoverUrlIsNotNull();
+    long countByCoverUrlIsNull();
+
+    @Query("SELECT COUNT(DISTINCT b.author) FROM Book b")
+    long countDistinctAuthors();
+
 
 
 }

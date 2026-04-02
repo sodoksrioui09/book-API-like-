@@ -9,6 +9,15 @@ export default function HomePage() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
+    const [totalBooks, setTotalBooks] = useState(0);
+    const [enriched, setEnriched] = useState(0);
+    const [raw, setRaw] = useState(0);
+    const [uniqueAuthors, setUniqueAuthors] = useState(0);
+
+// This controls WHEN stats show:
+    const [activeQuery, setActiveQuery] = useState("");
+
+
     const BASE_URL = "http://localhost:8080";
 
     // Fetch books at first homepage load
@@ -25,6 +34,25 @@ export default function HomePage() {
         }
         setLoading(false);
     };
+    //Fetch stats at first load
+    const fetchStats = async () => {
+        try {
+            const booksRes = await axios.get(`${BASE_URL}/stats/raw`);
+            setTotalBooks(booksRes.data.count);
+            setRaw(booksRes.data.raw);
+
+
+            const enrichedRes = await axios.get(`${BASE_URL}/stats/enriched`);
+            setEnriched(enrichedRes.data.enriched);
+
+            const authorsRes = await axios.get(`${BASE_URL}/stats/authors`);
+            setUniqueAuthors(authorsRes.data.count);
+            console.log("STATS:", totalBooks, enriched, raw, uniqueAuthors);
+        } catch (err) {
+            console.error("Stats error:", err);
+        }
+    };
+
 
     // Fetch books (used by search + pagination)
     const fetchBooks = async (searchQuery) => {
@@ -43,18 +71,27 @@ export default function HomePage() {
 
     // Run default search on first load
     useEffect(() => {
+        fetchStats();//show stats
         fetchDefaultBooks(); // default keyword
     }, []);
 
     // Fetch new page when page changes
     useEffect(() => {
-        if (query !== "") fetchBooks(query);
-        else fetchDefaultBooks();
+        if (activeQuery === "") {
+            fetchDefaultBooks();
+        } else {
+            fetchBooks(activeQuery);
+        }
     }, [page]);
-
     const handleSearch = () => {
-        setPage(0);           // reset page on new search
-        fetchBooks(query);
+        setPage(0);
+        setActiveQuery(query);
+
+        if (!query) {
+            fetchDefaultBooks();
+        } else {
+            fetchBooks(query);
+        }
     };
 
     return (
@@ -89,6 +126,22 @@ export default function HomePage() {
                     Search
                 </button>
             </div>
+            {activeQuery === "" && (
+                <div
+                    style={{
+                        background: "#f9f9f9",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        marginBottom: "20px",
+                        width: "fit-content"
+                    }}
+                >
+                    <p><strong>Total Books:</strong> {totalBooks}</p>
+                    <p><strong>Enriched Books:</strong> {enriched}</p>
+                    <p><strong>Raw Books:</strong> {raw}</p>
+                    <p><strong>Unique Authors:</strong> {uniqueAuthors}</p>
+                </div>
+            )}
 
             {/* Loading Indicator */}
             {loading && <p>Loading...</p>}
