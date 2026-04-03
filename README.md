@@ -93,7 +93,15 @@ Spring Boot API (localhost:8080)
   ▼
 PostgreSQL Database
 ```
+##  Data Ingestion & ETL Pipeline
 
+The application includes a simple ETL (Extract, Transform, Load) pipeline for ingesting and preparing book data.
+
+  ### Purpose
+
+- Separates raw and enriched data
+- Improves search quality and consistency
+- Simulates real-world data pipelines used in production systems
 ---
 
 ##  Key Design Principles
@@ -199,12 +207,13 @@ docker compose up --build
 
 ##  What This Project Demonstrates
 
-* Full-stack application design
-* Clean backend architecture
-* Real-world fuzzy search implementation
-* Docker setup & troubleshooting
-* Frontend-backend integration
-* Production-style configuration
+- Full-stack application design  
+- Clean backend architecture  
+- Real-world fuzzy search implementation  
+- Docker setup & troubleshooting  
+- Frontend-backend integration  
+- Production-style configuration  
+- Basic ETL pipeline design and data processing
 
 ---
 
