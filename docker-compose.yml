@@ -27,5 +27,15 @@ services:
       SPRING_DATASOURCE_USERNAME: myuser
       SPRING_DATASOURCE_PASSWORD: mypassword
 
+
+  frontend:
+      build: ./book-search-frontend
+      container_name: react-app
+      ports:
+        - "3000:80"
+      depends_on:
+        - app
+
+
 volumes:
   postgres_data:
