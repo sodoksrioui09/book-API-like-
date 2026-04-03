@@ -46,6 +46,15 @@ public class BookSearchController {
     }
 
 
+    @GetMapping("/books/suggest")
+    public List<String> suggest(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "5") int limit
+    ) {
+        return bookSearchService.suggest(q, limit);
+    }
+
+
 
 
 

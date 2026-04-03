@@ -14,6 +14,12 @@ import org.springframework.data.domain.Pageable;import java.util.*;
 @Service
 public class BookSearchService {
 
+
+    private static final int MIN_QUERY_LENGTH = 2;
+    private static final int FUZZY_MIN_LENGTH = 3;
+    private static final int MAX_DISTANCE = 2;
+
+
     @Autowired
     private BookRepository bookRepository;
     public BookSearchService(BookRepository bookRepository) {
@@ -61,6 +67,61 @@ public class BookSearchService {
 
 
     }
+    public List<String> suggest(String q,int limit){
+
+        if (q == null || q.trim().length() < MIN_QUERY_LENGTH) {
+            return List.of();
+        }
+        q = q.trim();
+        // Substring suggestions (%q%)
+        List<String> exact =
+                bookRepository.suggestTitles(q, limit);
+
+        if (exact.size() >= limit || q.length() < FUZZY_MIN_LENGTH) {
+            return exact;
+        }
+
+        // Fuzzy fallback
+        List<String> fuzzy =
+                findFuzzyTitles(q, exact, limit);
+
+        // Merge, dedupe, cap
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        merged.addAll(exact);
+        merged.addAll(fuzzy);
+
+        return merged.stream()
+                .limit(limit)
+                .toList();
+
+    }
+
+        private List<String> findFuzzyTitles(
+                String q,
+                List<String> exact,
+                int limit
+        ) {
+            char firstChar = q.charAt(0);
+
+            List<String> candidates =
+                    bookRepository.findTitlesByPrefix(
+                            String.valueOf(firstChar)
+                    );
+
+            return candidates.stream()
+                    .filter(title ->
+                            !exact.contains(title) &&
+                            EditDistanceUtil.levenshtein(q, title) <= MAX_DISTANCE
+                    )
+                    .sorted(
+                            Comparator.comparingInt(
+                                    title -> EditDistanceUtil.levenshtein(q, title)
+                            )
+                    )
+                    .limit(limit - exact.size())
+                    .toList();
+        }
+
 
 
 

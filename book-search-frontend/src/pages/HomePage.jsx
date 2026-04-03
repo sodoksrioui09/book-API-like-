@@ -16,6 +16,9 @@ export default function HomePage() {
 
     const [activeQuery, setActiveQuery] = useState("");
 
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     const BASE_URL = "http://localhost:8080";
 
     const fetchDefaultBooks = async (pageNumber = page) => {
@@ -30,6 +33,21 @@ export default function HomePage() {
             console.error(err);
         }
         setLoading(false);
+    };
+    const fetchSuggestions = async (value) => {
+        if (!value || value.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+
+        try {
+            const res = await axios.get(`${BASE_URL}/books/suggest`, {
+                params: { q: value, limit: 5 },
+            });
+            setSuggestions(res.data);
+        } catch (err) {
+            console.error("Suggestion error", err);
+        }
     };
 
     const fetchStats = async () => {
@@ -70,23 +88,49 @@ export default function HomePage() {
     }, []);
 
     useEffect(() => {
-        if (query.trim()) {
-            fetchUnifiedSearch(query, page);
-        } else {
-            fetchDefaultBooks(page);
-            setActiveQuery("");
+
+        if (activeQuery.trim()) {
+            fetchUnifiedSearch(activeQuery, page);
         }
-    }, [page]);
+        else {
+            fetchDefaultBooks(page);
+
+        }
+    }, [page,activeQuery]);
+
+    useEffect(() => {
+        if (!query.trim()) {
+            setSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query]);
 
     const handleSearch = () => {
-        setPage(0);
-        setActiveQuery(query);
+        setShowSuggestions(false);
 
-        if (!query) {
-            fetchDefaultBooks();
-        } else {
-            fetchUnifiedSearch(query, 0);
+        // Force reset first
+        if (page !== 0) {
+            setPage(0);
         }
+
+        // Then trigger search
+        setActiveQuery(query);
+    };
+    const handleSuggestionSelect = (value) => {
+        setShowSuggestions(false);
+
+        if (page !== 0) {
+            setPage(0);
+        }
+
+        setQuery(value);
+        setActiveQuery(value);
     };
 
     return (
@@ -126,24 +170,82 @@ export default function HomePage() {
                     style={{
                         display: "flex",
                         gap: "12px",
-                        marginBottom: "32px"
+                        marginBottom: "32px",
+                        alignItems: "flex-start"
                     }}
                 >
-                    <input
-                        type="text"
-                        placeholder="Search books, authors, topics..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        style={{
-                            flex: 1,
-                            padding: "16px",
-                            borderRadius: "14px",
-                            border: "1px solid #e5e7eb",
-                            fontSize: "16px",
-                            background: "white",
-                        }}
-                    />
+                    {/* INPUT + DROPDOWN */}
+                    <div style={{ position: "relative", flex: 1 }}>
 
+                        <input
+                            type="text"
+                            placeholder="Search books, authors, topics..."
+                            value={query}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                setShowSuggestions(true);
+                            }}
+                            onFocus={() => setShowSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                            style={{
+                                width: "100%",
+                                padding: "16px",
+                                borderRadius: "14px",
+                                border: "1px solid #e5e7eb",
+                                fontSize: "16px",
+                                background: "white",
+                            }}
+                        />
+
+                        {/* DROPDOWN */}
+                        {showSuggestions && suggestions.length > 0 && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: "100%",
+                                    left: 0,
+                                    right: 0,
+                                    background: "white",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "12px",
+                                    marginTop: "6px",
+                                    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                                    zIndex: 20,
+                                    overflow: "hidden",
+                                    maxHeight: "250px",
+                                    overflowY: "auto"
+                                }}
+                            >
+                                {suggestions.map((s, i) => (
+                                    <div
+                                        key={i}
+
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSuggestionSelect(s);
+                                        }}
+
+                                        style={{
+                                            padding: "12px 14px",
+                                            cursor: "pointer",
+                                            borderBottom: "1px solid #f1f5f9",
+                                            transition: "background 0.15s"
+                                        }}
+                                        onMouseEnter={(e) =>
+                                            (e.currentTarget.style.background = "#f3f4f6")
+                                        }
+                                        onMouseLeave={(e) =>
+                                            (e.currentTarget.style.background = "white")
+                                        }
+                                    >
+                                        🔍 {s}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* BUTTON */}
                     <button
                         onClick={handleSearch}
                         style={{
@@ -153,11 +255,14 @@ export default function HomePage() {
                             border: "none",
                             borderRadius: "14px",
                             fontWeight: "600",
+                            fontSize: "15px",
                             cursor: "pointer",
-                            boxShadow: "0 4px 12px rgba(37,99,235,0.2)"
+                            boxShadow: "0 4px 12px rgba(37,99,235,0.25)",
+                            whiteSpace: "nowrap",
+                            transition: "all 0.2s ease"
                         }}
                     >
-                        Search
+                        🔍 Search
                     </button>
                 </div>
 

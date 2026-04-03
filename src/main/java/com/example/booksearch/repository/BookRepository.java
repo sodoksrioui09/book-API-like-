@@ -15,7 +15,42 @@ import java.util.Map;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
-//NotPageable TEXT SEARCH needed for unified search (later)
+
+    ///suggest titles => Substring match
+    @Query(
+            value = """
+        SELECT DISTINCT title
+        FROM books
+        WHERE title ILIKE CONCAT('%', :q, '%')
+        ORDER BY title ASC
+        LIMIT :limit
+    """,
+            nativeQuery = true
+    )
+    List<String> suggestTitles(
+            @Param("q") String q,
+            @Param("limit") int limit
+    );
+
+
+    ///prefix candidate pool for fuzzy
+    @Query(
+            value = """
+        SELECT DISTINCT title
+        FROM books
+        WHERE title ILIKE CONCAT(:prefix, '%')
+        ORDER BY title ASC
+    """,
+            nativeQuery = true
+    )
+    List<String> findTitlesByPrefix(
+            @Param("prefix") String prefix
+    );
+
+
+
+
+///NotPageable TEXT SEARCH needed for unified search
     @Query(
             value = """                 
             SELECT * FROM books
@@ -25,7 +60,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                         ORDER BY title ASC
                         """,nativeQuery = true)
     List<Book> searchNotPageable(@Param("q") String q, @Param("year") Integer year);
-//NotPageable Author SEARCH needed for unified search (later)
+///NotPageable Author SEARCH needed for unified search
     @Query(
             value = """
             SELECT * FROM books
@@ -96,7 +131,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     )
     Page<Book> findAllEnriched(Pageable pageable);
 
-    //FIND all enrichedand recent books by publich_year
+    ///FIND all enrichment recent books by publich_year
     @Query(
             value = """
             SELECT * FROM books
@@ -109,7 +144,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             ,nativeQuery = true)
    Page<Book> findRecent(Pageable pageable);
 
-//find all athors pagnated
+///find all authors paginated
     @Query(value = """
         SELECT DISTINCT author FROM books
         ORDER BY author ASC 
